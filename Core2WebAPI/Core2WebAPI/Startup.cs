@@ -11,6 +11,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Core2WebAPI.Data;
 using Core2WebAPI.Models;
 using Core2WebAPI.Services;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
 
 namespace Core2WebAPI
 {
@@ -52,6 +54,32 @@ namespace Core2WebAPI
                 options.User.RequireUniqueEmail = true;
             });
 
+            // Instead of redirecting to login page, it will give 401 error code in case of 
+            // un -authenticated access to API
+            services.AddAuthentication(o =>
+            {
+                o.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+                o.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+            }).AddJwtBearer(o =>
+            {
+                // my API name as defined in Config.cs - new ApiResource... or in DB ApiResources table
+                o.Audience = Configuration["Settings:Authentication:ApiName"];
+                // URL of Auth server(API and Auth are separate projects/applications),
+                // so for local testing this is http://localhost:5000 if you followed ID4 tutorials
+                o.Authority = Configuration["Settings:Authentication:Authority"];
+                
+                // o.RequireHttpsMetadata = !CurrentEnvironment.IsDevelopment();
+                o.TokenValidationParameters = new TokenValidationParameters
+                {
+                    ValidateAudience = true,
+                    // Scopes supported by API as defined in Config.cs - new ApiResource... or in DB ApiScopes table
+                    ValidAudiences = new List<string>() {
+                        "api.read",
+                        "api.write"
+                   },
+                    ValidateIssuer = true
+                };
+            });
 
             // Add application services.
             services.AddTransient<IEmailSender, EmailSender>();
