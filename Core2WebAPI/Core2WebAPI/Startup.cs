@@ -13,6 +13,8 @@ using Core2WebAPI.Models;
 using Core2WebAPI.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using System.Text;
+using System.IdentityModel.Tokens.Jwt;
 
 namespace Core2WebAPI
 {
@@ -62,22 +64,16 @@ namespace Core2WebAPI
                 o.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
             }).AddJwtBearer(o =>
             {
-                // my API name as defined in Config.cs - new ApiResource... or in DB ApiResources table
-                o.Audience = Configuration["Settings:Authentication:ApiName"];
-                // URL of Auth server(API and Auth are separate projects/applications),
-                // so for local testing this is http://localhost:5000 if you followed ID4 tutorials
-                o.Authority = Configuration["Settings:Authentication:Authority"];
-                
-                // o.RequireHttpsMetadata = !CurrentEnvironment.IsDevelopment();
                 o.TokenValidationParameters = new TokenValidationParameters
                 {
+                    ValidateIssuerSigningKey = true,
+                    ValidateIssuer = true,
+                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.ASCII.GetBytes(Configuration["JwtSecurityToken:Key"])),
+                    ValidIssuer = Configuration["JwtSecurityToken:Issuer"],
                     ValidateAudience = true,
-                    // Scopes supported by API as defined in Config.cs - new ApiResource... or in DB ApiScopes table
-                    ValidAudiences = new List<string>() {
-                        "api.read",
-                        "api.write"
-                   },
-                    ValidateIssuer = true
+                    ValidAudience = Configuration["JwtSecurityToken:Audience"],
+                    ValidateLifetime = true,
+                    ClockSkew = TimeSpan.Zero
                 };
             });
 
@@ -111,6 +107,7 @@ namespace Core2WebAPI
                     name: "default",
                     template: "{controller=Home}/{action=Index}/{id?}");
             });
+
         }
     }
 }
